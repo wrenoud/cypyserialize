@@ -1,0 +1,8 @@
+*.pyc
+
+src/*.c
+src/*.pyd
+
+build/
+
+__pycache__
