@@ -101,21 +101,20 @@ cdef class StructFieldBase(Serializeable):
     def __get__(self, parent, parent_type):
         if parent is None:
             return self
-        elif self._name in parent.__dict__:
-            _tmp = parent.__dict__[self._name]
-            for getter in self._getters:
-                _tmp = getter(_tmp)
-            return _tmp
+        _tmp = parent.__values[self._index]
+        for getter in self._getters:
+            _tmp = getter(_tmp)
+        return _tmp
 
     def __set__(self, parent, value):
         if value is None:
-            parent.__dict__[self._name] = self._default
+            parent.__values[self._index] = self._default
         else:
             for setter in self._setters:
                 value = setter(value)
             if self._validators is not None:
                 self.validate(value)
-            parent.__dict__[self._name] = value
+            parent.__values[self._index] = value
 
     def validate(self, value):
         if self._validators is not None:
@@ -261,7 +260,7 @@ cdef class float(StructFieldBase):
         self.size = sizeof(float)
 
 
-class none(Serializeable):
+class none(StructFieldBase):
     pass
 
 
@@ -274,6 +273,8 @@ network = b'!'
 cdef class StructObjectBase(Serializeable):
     # _flat = True           # boolean flag indicating if size is reportable a-priori, assumed true until shown to be not
     # _partial_class = False # flag indicating child fields have been defined, but not as readable type
+
+    cdef public list __values
 
     def __cinit__(self, *args, **kargs):
         cdef long argc = len(args)
@@ -342,13 +343,20 @@ cdef class StructObjectBase(Serializeable):
         if len(args) == 1 and isinstance(args[0], string_types + (memoryview, type(b''))):
             self.unpack(args[0])
         elif len(args) > 0 or len(kargs) > 0:
+            self.__values = []
             for i, field_name in enumerate(self.__class__._field_order):
+                self.__values.append(None)
                 # assign order parameter and defaults for remainder
                 if i < len(args):
                     self.__setattr__(field_name, args[i])
 
             if len(kargs) > 0:
                 self.update(kargs)
+        else:
+            self.__values = []
+            # no information to populate, need to fill up with empty data just in case
+            for i in range(self.__len__()):
+                self.__values.append(None)
 
     def AddSetter(self, func, field_name):
         if field_name in self.__class__._field_order:
@@ -368,28 +376,28 @@ cdef class StructObjectBase(Serializeable):
         else:
             raise AttributeError("{} is not an attribute of {}".format(field_name, self.__class__.__name__))
 
+    cdef inline void check_container(self, StructObjectBase parent):
+        """Checks that an appropriate empty value had been set for this field in it's parent"""
+        cdef int i, n = self.__len__()
+        if parent.__values[self._index] is None:
+            # hasn't been initialized in parent, set all values to none
+            parent.__values[self._index] = []
+            for i in range(n):
+                parent.__values[self._index].append(None)
 
     def __get__(self, parent, parent_type):
         if parent is not None:
             # kansas city shuffle
             # retrieve values from parent, for now we'll masquerade as this parent's child
-            if self._name not in parent.__dict__:
-                # hasn't been initialized in parent, set all values to none
-                # self.__set__(parent, None)
-                parent.__dict__[self._name] = {}
-            self.__dict__ = parent.__dict__[self._name]
+            self.check_container(parent)
+            self.__values = parent.__values[self._index]
         return self
 
     def __set__(self, parent, value):
-        # create empty dict in parent
-        if value is None:
-            parent.__dict__[self._name] = {}
-            for field_name in self._non_field:
-                self.__setattr__(field_name, None)
-
-        elif issubclass(value.__class__, self.__class__):
+        self.check_container(parent)
+        if issubclass(value.__class__, self.__class__):
             # copy pointer to outside values
-            parent.__dict__[self._name] = value.__dict__
+            parent.__values[self._index] = value.__values
         else:
             raise TypeError("'{}' must be of type '{}', given '{}'".format(self._name, self.__class__.__name__, value.__class__.__name__))
 
@@ -469,10 +477,11 @@ cdef class StructObjectBase(Serializeable):
 
     def unpack(self, bindata):
         cdef long offset
-        self._unpack(bindata, &offset, self.__dict__)
+        self.__values = []
+        self._unpack(bindata, &offset, self.__values)
         # self._size = offset
 
-    cdef _unpack(self, const unsigned char * bindata, long * offset, dict container):
+    cdef _unpack(self, const unsigned char * bindata, long * offset, list container):
         cdef str field_name
         cdef object field
         cdef list _field_list = self.__class__._field_order
@@ -481,19 +490,19 @@ cdef class StructObjectBase(Serializeable):
             field = self.__class__.__dict__[field_name]
 
             if issubclass(field.__class__, StructFieldBase):
-                container[field_name] = make_object_from_variant((<StructFieldBase>field)._unpacker(bindata, offset)) # StructFieldBase._unpack(field, bindata, offset)
+                container.append(make_object_from_variant((<StructFieldBase>field)._unpacker(bindata, offset))) # StructFieldBase._unpack(field, bindata, offset)
             elif issubclass(field.__class__, StructObjectBase):
-                container[field_name] = {}
-                StructObjectBase._unpack(field, bindata, offset, container[field_name])
+                container.append([])
+                StructObjectBase._unpack(field, bindata, offset, container[-1])
             else:
                 raise Exception("Attempted to use unknown Serializeable ({}) to unpack.".format(type(field)))
 
     def pack(self):
         cdef bytearray buff = bytearray()
-        self._pack(buff, self.__dict__)
+        self._pack(buff, self.__values)
         return buff
 
-    cdef _pack(self, bytearray buff, dict container):
+    cdef _pack(self, bytearray buff, list container):
         cdef str field_name
         cdef object field
         cdef list _field_list = self.__class__._field_order
@@ -502,9 +511,9 @@ cdef class StructObjectBase(Serializeable):
             field = self.__class__.__dict__[field_name]
 
             if issubclass(field.__class__, StructFieldBase):
-                (<StructFieldBase>field)._packer(buff, container[field_name]) # StructFieldBase._unpack(field, bindata, offset)
+                (<StructFieldBase>field)._packer(buff, container[field._index]) # StructFieldBase._unpack(field, bindata, offset)
             elif issubclass(field.__class__, StructObjectBase):
-                StructObjectBase._pack(field, buff, container[field_name])
+                StructObjectBase._pack(field, buff, container[field._index])
             else:
                 raise Exception("Attempted to use unknown Serializeable ({}) to unpack.".format(type(field)))
 
