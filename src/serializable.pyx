@@ -29,7 +29,6 @@ cdef class Serializeable(object):
     """
     cdef:
         readonly uint64_t _id               # instance id, used to infer declaration order of fields 
-        readonly bint     _flat             # boolean flag indicating if size is reportable a-priori
         readonly unicode  _name             # field name used to identify instance in parent container
         readonly uint64_t _index            # field index in parent container
 
@@ -37,7 +36,6 @@ cdef class Serializeable(object):
         global STRUCT_OBJECT_COUNTER
 
         self._id = STRUCT_OBJECT_COUNTER = STRUCT_OBJECT_COUNTER + 1
-        self._flat = False
         self._name = None
 
     cpdef SetName(self, name):
@@ -50,6 +48,8 @@ cdef class StructFieldBase(Serializeable):
     """
     Acts as a descriptor class for a class attribute in a BinaryObjectBase
     """
+    _flat = True # boolean flag indicating if size is reportable a-priori
+
     cdef:
         public bytes format  # a struct Format String, see https://docs.python.org/3.5/library/struct.html#format-strings
         public object _python_type
@@ -86,7 +86,6 @@ cdef class StructFieldBase(Serializeable):
         self._getters = []
         self._validators = []
         self._name = None
-        self._flat = True
 
         if default is not None: self._default = default
         if getter is not None: self.AddGetter(getter)
@@ -273,7 +272,8 @@ network = b'!'
 
 
 cdef class StructObjectBase(Serializeable):
-    _partial_class = False # flag indicating child fields have been defined, but not as readable type
+    # _flat = True           # boolean flag indicating if size is reportable a-priori, assumed true until shown to be not
+    # _partial_class = False # flag indicating child fields have been defined, but not as readable type
 
     def __cinit__(self, *args, **kargs):
         cdef long argc = len(args)
@@ -337,10 +337,7 @@ cdef class StructObjectBase(Serializeable):
             elif isinstance(args[0], dict):
                 kargs = args[0]
                 args=[]
-
-        #for field_name in self._non_field:
-        #    self.__setattr__(field_name, None)
-        
+      
         # check for binary data
         if len(args) == 1 and isinstance(args[0], string_types + (memoryview, type(b''))):
             self.unpack(args[0])

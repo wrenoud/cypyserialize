@@ -71,8 +71,6 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(obj.b, 2**63)
 
     def testInitSetByAttribute(self):
-        print("hello")
-
         p = Point()
         self.assertEqual(list(p.items()),[('x', None), ('y', None)])
         p.x = 5000.0
@@ -285,7 +283,5 @@ class StructObjectBaseTests(unittest.TestCase):
 
         
 if __name__ == '__main__':
-    print("hello")
-
     unittest.main()
     
