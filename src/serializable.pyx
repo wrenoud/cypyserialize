@@ -517,25 +517,6 @@ cdef class StructObjectBase(Serializeable):
             else:
                 raise Exception("Attempted to use unknown Serializeable ({}) to unpack.".format(type(field)))
 
-    def unpack_from(self, bindata, offset=0):
-        self._unpack_from(bindata, None, offset)
-
-    #def pack(self):
-    #    return self._pack()
-
-    def field_instance(self, field_name):
-        return self.__class__.__dict__[field_name]
-
-    def unprep(self):
-        for field_name in self.__class__._field_order:
-            field = self.__class__.__dict__[field_name]
-            if issubclass(field.__class__, StructFieldBase) and field._getters is not None:
-                field.unprep(self)
-            elif issubclass(field.__class__, StructObjectBase):
-                field.unprep()
-            else:
-                pass
-
     def update(self, *args, **kargs):
         "Same functionality as dict.update(). "
         # if unnamed parameters used lets update the kargs and work from there
