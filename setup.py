@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 NAME = "cypyserialize"
-VERSION = "0.3"
+VERSION = "0.5"
 DESCR = "Really easy, really quick, binary parser framework for Python"
 try:
    import pypandoc
