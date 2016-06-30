@@ -16,6 +16,7 @@ bb = BoundingBox(b.extents.northwest, b.extents.southeast, b.extents.northsouth)
 
 print(bs)
 print(bs == cBoundingBox(bs).pack())
+print(dict(cBoundingBox(bs).items()))
 
 tt = []
 
@@ -78,10 +79,22 @@ print("cls", formatTime(tt[-1], 10000))
 print("{:.0f}%".format(tt[-2] / tt[-1] * 100))
 print()
 
+E = Extents(bs)
+
 cE = cExtents(bs)
-print(cE.extents.northwest.y, cE.__dict__)
+print(cE.extents.northwest.y, dict(cE.items()))
 pyE = PyExtents(bs)
 print(pyE.extents.northwest.y)
+
+start = time.time()
+for i in range(10000): E.extents.northwest.x
+tt.append(time.time() - start)
+print("old", formatTime(tt[-1], 10000))
+
+start = time.time()
+for i in range(10000): E['extents.northwest.x']
+tt.append(time.time() - start)
+print("old", formatTime(tt[-1], 10000))
 
 start = time.time()
 for i in range(100000): cE['extents.northwest.x']

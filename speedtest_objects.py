@@ -37,26 +37,26 @@ class Extents(structobject.structObject):
     extents = BoundingBox
 
 
-class cPoint(cypyserialize.StructObjectBase):
+class cPoint(cypyserialize.SerializableObject):
     "Basic point class"
     x = cypyserialize.double()
     y = cypyserialize.uint()
 
 
-class cPoint3D(cypyserialize.StructObjectBase):
+class cPoint3D(cypyserialize.SerializableObject):
     "Basic point class"
     x = cypyserialize.double()
     y = cypyserialize.double()
     z = cypyserialize.double()
 
 
-class cBoundingBox(cypyserialize.StructObjectBase):
+class cBoundingBox(cypyserialize.SerializableObject):
     northwest = cPoint()
     southeast = cPoint()
     northsouth = cPoint()
 
 
-class cExtents(cypyserialize.StructObjectBase):
+class cExtents(cypyserialize.SerializableObject):
     count = cypyserialize.double()
     extents = cBoundingBox()
 
