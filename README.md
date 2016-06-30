@@ -134,24 +134,31 @@ Now we're going to reuse the point structure to describe a path as a series of p
 
 ```Python
 class Path(cypyserialize.SerializableObject):
-    # a nice description of the path
-    description = cypyserialize.string(
-        len = 25
-    )
     # the number of points in the path
     point_count = cypyserialize.uint(
         generator = lambda self: len(self.points)
     )
     # the points
-    points = structArray(
-        object_type = Point(),
-        len = lambda self: self.point_count
+    points = cypyserialize.SerializableArray(
+        Point(),
+        count = lambda self: self.point_count
     )
 ```
 
 The inline function for length (`len`) is called before a binary read (unpack) and is used for determining the read length.
 
 The generator on `point_count` is only called after the full structure is read.
+
+But an even simpler approach is to let the array manage it's size, just tell in the type to store as 
+
+```Python
+class Path(cypyserialize.SerializableObject):
+    # the points
+    points = cypyserialize.SerializableArray(
+        Point(),
+        count = cypyserialize.uint()
+    )
+```
 
 Explicit Byte Order
 -------------------
