@@ -1,8 +1,11 @@
+# bytecode files
 *.pyc
 
 src/*.c
 src/*.pyd
 
 build/
+htmlcov/
+.coverage
 
 __pycache__
