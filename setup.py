@@ -34,16 +34,19 @@ EXTENSIONS = [
     Extension(
         SRC_DIR + ".variant",
         [SRC_DIR + '/variant' + EXT],
+        include_dirs=['.']
         libraries=[]
     ),
     Extension(
         SRC_DIR + ".serializers",
         [SRC_DIR + '/serializers' + EXT],
+        include_dirs=['.']
         libraries=[]
     ),
     Extension(
         SRC_DIR + ".serializable",
         [SRC_DIR + '/serializable' + EXT],
+        include_dirs=['.']
         libraries=[]
     )
 ]
