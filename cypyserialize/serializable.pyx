@@ -1,7 +1,3 @@
-# cython: profile=True
-# cython: linetrace=True
-# distutils: define_macros=CYTHON_TRACE_NOGIL=1
-
 import inspect
 import types
 import struct as structure
@@ -98,21 +94,24 @@ cdef class SerializableField(Serializeable):
     def __get__(self, parent, parent_type):
         if parent is None:
             return self
-        return self.get_by__index(parent, self.__index)
+        return self.get_by_index(parent, self.__index)
 
     def __set__(self, parent, value):
         if value is None:
             parent.__values[self.__index] = self.__default
         else:
-            self.set_by__index(parent, self.__index, value)
+            self.set_by_index(parent, self.__index, value)
 
-    cdef inline object get_by__index(self, Serializeable parent, uint64_t index):
+    cdef inline object get_by_index(self, Serializeable parent, uint64_t index):
         cdef object _tmp = parent.__values[index]
-        for getter in self.__getters:
-            _tmp = getter(_tmp)
-        return _tmp
+        if _tmp is None:
+            return self.__default
+        else:
+            for getter in self.__getters:
+                _tmp = getter(_tmp)
+            return _tmp
 
-    cdef inline object set_by__index(self, Serializeable parent, uint64_t index, object value):
+    cdef inline object set_by_index(self, Serializeable parent, uint64_t index, object value):
         for setter in self.__setters:
             value = setter(value)
         if self.__validators is not None:
@@ -287,8 +286,6 @@ cdef class SerializableObject(SerializableBase):
         cdef uint32_t kargc = len(kargs)
 
         if "_field_order" not in self.__class__.__dict__:
-            sz = 0
-            fields = []
             self.__class__._partial_class = False
             self.__class__.__flat = True
 
@@ -311,6 +308,8 @@ cdef class SerializableObject(SerializableBase):
                         raise Exception("Class attribute '{}' is not not a sublass of StructBase, it's order cannot be determined.".format(key))
 
             # update status based on fields
+            sz = 0
+            fields = []
             for key, attr in self.__class__.__dict__.items():
                 if isinstance(attr, none):
                     self.__class__._partial_class = True
@@ -330,9 +329,12 @@ cdef class SerializableObject(SerializableBase):
                 fields = sorted(fields, key=lambda item: item[1])
                 # grab names
                 self.__class__._field_order = []
-                for i, (field__name, creation__index) in enumerate(fields):
-                    self.__class__.__dict__[field__name].SetIndex(i)
-                    self.__class__._field_order.append(field__name)
+                for i, (field_name, creation__index) in enumerate(fields):
+                    self.__class__._field_order.append(field_name)
+
+            # update field indexes
+            for i, field_name in enumerate(self.__class__._field_order):
+                self.__class__.__dict__[field_name].SetIndex(i)
         
         elif self.__class__._partial_class:
             raise NotImplementedError('{} has NoneType fields that must be implemented in a subclass'.format(self.__class__.__name__))
@@ -350,37 +352,39 @@ cdef class SerializableObject(SerializableBase):
             self.unpack(args[0])
         elif len(args) > 0 or len(kargs) > 0:
             self.__values = []
-            for i, field__name in enumerate(self.__class__._field_order):
+            for i, field_name in enumerate(self.__class__._field_order):
                 self.__values.append(None)
+                self.__setattr__(field_name, None)
                 # assign order parameter and defaults for remainder
                 if i < len(args):
-                    self.__setattr__(field__name, args[i])
+                    self.__setattr__(field_name, args[i])
 
             if len(kargs) > 0:
                 self.update(kargs)
         else:
             self.__values = []
             # no information to populate, need to fill up with empty data just in case
-            for i in range(self.__len__()):
+            for field_name in self.__class__._field_order:
                 self.__values.append(None)
+                self.__setattr__(field_name, None)
 
-    def AddSetter(self, func, field__name):
-        if field__name in self.__class__._field_order:
-            self.__class__.__dict__[field__name].AddSetter(func)
+    def AddSetter(self, func, field_name):
+        if field_name in self.__class__._field_order:
+            self.__class__.__dict__[field_name].AddSetter(func)
         else:
-            raise AttributeError("{} is not an attribute of {}".format(field__name, self.__class__.__name__))
+            raise AttributeError("{} is not an attribute of {}".format(field_name, self.__class__.__name__))
 
-    def AddGetter(self, func, field__name):
-        if field__name in self.__class__._field_order:
-            self.__class__.__dict__[field__name].AddSetter(func)
+    def AddGetter(self, func, field_name):
+        if field_name in self.__class__._field_order:
+            self.__class__.__dict__[field_name].AddSetter(func)
         else:
-            raise AttributeError("{} is not an attribute of {}".format(field__name, self.__class__.__name__))
+            raise AttributeError("{} is not an attribute of {}".format(field_name, self.__class__.__name__))
 
-    def AddValidator(self, func, field__name):
-        if field__name in self.__class__._field_order:
-            self.__class__.__dict__[field__name].AddSetter(func)
+    def AddValidator(self, func, field_name):
+        if field_name in self.__class__._field_order:
+            self.__class__.__dict__[field_name].AddSetter(func)
         else:
-            raise AttributeError("{} is not an attribute of {}".format(field__name, self.__class__.__name__))
+            raise AttributeError("{} is not an attribute of {}".format(field_name, self.__class__.__name__))
 
     cdef inline void check_container(self, Serializeable parent, uint64_t index):
         """Checks that an appropriate empty value had been set for this field in it's parent"""
@@ -395,20 +399,21 @@ cdef class SerializableObject(SerializableBase):
         if parent is None:
             return self
         else:
-            return self.get_by__index(parent, self.__index)
+            return self.get_by_index(parent, self.__index)
 
     def __set__(self, parent, value):
-        self.set_by__index(parent, self.__index, value)
+        self.set_by_index(parent, self.__index, value)
 
-    cdef inline object get_by__index(self, Serializeable parent, uint64_t index):
+    cdef inline object get_by_index(self, Serializeable parent, uint64_t index):
         # kansas city shuffle
         # retrieve values from parent, for now we'll masquerade as this parent's child
         self.check_container(parent, index)
         self.__values = parent.__values[index]
         return self
 
-    cdef inline int set_by__index(self, Serializeable parent, uint64_t index, object value) except 1:
+    cdef inline int set_by_index(self, Serializeable parent, uint64_t index, object value) except 1:
         self.check_container(parent, index)
+        if value is None: return 0
         if issubclass(value.__class__, self.__class__):
             # copy pointer to outside values
             parent.__values[index] = value.__values
@@ -418,11 +423,11 @@ cdef class SerializableObject(SerializableBase):
     def __setitem__(self, key, value):
         if isinstance(key, string_types):
             if '.' in key:
-                field__names = key.split('.')
-                obj = self.__getattribute__(field__names[0])
-                for field__name in field__names[1:-1]:
-                    obj = obj.__getattribute__(field__name)
-                obj.__setattr__(field__names[-1], value)
+                field_names = key.split('.')
+                obj = self.__getattribute__(field_names[0])
+                for field_name in field_names[1:-1]:
+                    obj = obj.__getattribute__(field_name)
+                obj.__setattr__(field_names[-1], value)
             else:
                 self.__setattr__(key, value)
         elif isinstance(key, int):
@@ -431,19 +436,19 @@ cdef class SerializableObject(SerializableBase):
             else:
                 raise IndexError("Index: {} not in object".format(key))
         elif isinstance(key, slice):
-            field__names = self.__class__._field_order[key]
-            for i, field__name in enumerate(field__names):
-                self.__setattr__(field__name, value[i])
+            field_names = self.__class__._field_order[key]
+            for i, field_name in enumerate(field_names):
+                self.__setattr__(field_name, value[i])
         else:
             raise Exception("Unrecognized index: {} ({})".format(key, type(key)))
 
     def __getitem__(self, key):
         if isinstance(key, string_types):
             if '.' in key:
-                _field__names = key.split('.')
-                obj = self.__getattribute__(_field__names[0])
-                for _field__name in _field__names[1:]:
-                    obj = obj.__getattribute__(_field__name)
+                _field_names = key.split('.')
+                obj = self.__getattribute__(_field_names[0])
+                for _field_name in _field_names[1:]:
+                    obj = obj.__getattribute__(_field_name)
                 return obj
             else:
                 return self.__getattribute__(key)
@@ -454,8 +459,8 @@ cdef class SerializableObject(SerializableBase):
                 raise IndexError("Index: {} not in object".format(key))
         elif isinstance(key, slice):
             result = []
-            for field__name in self.__class__._field_order[key]:
-                field = self.__class__.__dict__[field__name]
+            for field_name in self.__class__._field_order[key]:
+                field = self.__class__.__dict__[field_name]
                 if issubclass(field.__class__, SerializableField):
                     result.append(field.__get__(self, self.__class__))
                 elif issubclass(field.__class__, SerializableObject):
@@ -482,8 +487,8 @@ cdef class SerializableObject(SerializableBase):
 
     def values(self):
         values = []
-        for key in self.__class__._field_order:
-            values.append(self.__getattribute__(key))
+        for field_name in self.__class__._field_order:
+            values.append(self.__getattribute__(field_name))
         return values
 
     def items(self):
@@ -496,12 +501,12 @@ cdef class SerializableObject(SerializableBase):
         # self._size = offset
 
     cdef int _unpack(self, const unsigned char * bindata, uint32_t * offset, list container) except -1:
-        cdef str field__name
+        cdef str field_name
         cdef object field
         cdef list _field_list = self.__class__._field_order
         
-        for field__name in _field_list:
-            field = self.__class__.__dict__[field__name]
+        for field_name in _field_list:
+            field = self.__class__.__dict__[field_name]
 
             if issubclass(field.__class__, SerializableField):
                 container.append(make_object_from_variant((<SerializableField>field)._unpacker(bindata, offset)))
@@ -520,15 +525,15 @@ cdef class SerializableObject(SerializableBase):
         return buff
 
     cdef int _pack(self, bytearray buff, list container) except -1:
-        cdef str field__name
+        cdef str field_name
         cdef object field
         cdef list _field_list = self.__class__._field_order
         
-        for field__name in _field_list:
-            field = self.__class__.__dict__[field__name]
+        for field_name in _field_list:
+            field = self.__class__.__dict__[field_name]
 
             if container[field.__index] is None:
-                raise Exception("{} not set".format(field__name))
+                raise Exception("{} not set".format(field_name))
 
             if issubclass(field.__class__, SerializableField):
                 (<SerializableField>field)._packer(buff, container[field.__index])
@@ -615,9 +620,9 @@ cdef class SerializableArray(SerializableBase):
     def __getitem__(self, key):
         if isinstance(key, int):
             if issubclass(self.__element_t.__class__, SerializableField):
-                return (<SerializableField>self.__element_t).get_by__index(self, key)
+                return (<SerializableField>self.__element_t).get_by_index(self, key)
             elif issubclass(self.__element_t.__class__, SerializableObject):
-                return (<SerializableObject>self.__element_t).get_by__index(self, key)
+                return (<SerializableObject>self.__element_t).get_by_index(self, key)
         elif isinstance(key, slice):
             values = []
             for i in range(*key.indices(self.__len__())):
@@ -631,25 +636,25 @@ cdef class SerializableArray(SerializableBase):
         if isinstance(key, int):
             if key < self.__len__():
                 if issubclass(self.__element_t.__class__, SerializableField):
-                    (<SerializableField>self.__element_t).set_by__index(self, key, value)
+                    (<SerializableField>self.__element_t).set_by_index(self, key, value)
                 elif issubclass(self.__element_t.__class__, SerializableObject):
-                    (<SerializableObject>self.__element_t).set_by__index(self, key, value)
+                    (<SerializableObject>self.__element_t).set_by_index(self, key, value)
             else:
                 raise IndexError("Index: {} not in object".format(key))
         elif isinstance(key, slice):
             if issubclass(self.__element_t.__class__, SerializableField):
                 for i, index in enumerate(key.indices(self.__len__())):
-                    (<SerializableField>self.__element_t).set_by__index(self, index, value)
+                    (<SerializableField>self.__element_t).set_by_index(self, index, value)
             elif issubclass(self.__element_t.__class__, SerializableObject):
                 for i, index in enumerate(key.indices(self.__len__())):
-                    (<SerializableObject>self.__element_t).set_by__index(self, index, value)
+                    (<SerializableObject>self.__element_t).set_by_index(self, index, value)
         else:
             raise Exception("Unrecognized index: {}".format(key))
 
     def append(self, *args, **kargs):
         if issubclass(self.__element_t.__class__, SerializableField):
             self.__values.append(None)
-            (<SerializableField>self.__element_t).set_by__index(self, self.__len__() - 1, args[0])
+            (<SerializableField>self.__element_t).set_by_index(self, self.__len__() - 1, args[0])
         elif issubclass(self.__element_t.__class__, SerializableObject):
             # TODO: this is ineficient, it creates a new descriptor for each item
             obj = self.__element_t.__class__(*args,**kargs)

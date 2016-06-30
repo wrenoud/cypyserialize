@@ -32,6 +32,15 @@ class BoundingBox(cypyserialize.SerializableObject):
     southeast = Point()
 
 
+class GenericDatagram(cypyserialize.SerializableObject):
+    STX = cypyserialize.uchar(value=0x02)
+    timestamp = cypyserialize.uint()
+    body = cypyserialize.none()
+    ETX = cypyserialize.uchar(value=0x03)
+
+class BoundingBoxDatagram(GenericDatagram):
+    body = BoundingBox()
+
 class SerializableObjectTests(unittest.TestCase):
 
     def testByte(self):
@@ -252,15 +261,6 @@ class SerializableObjectTests(unittest.TestCase):
 
     def testOverloadingFixesIssue1(self):
         # covers fix #1
-        class GenericDatagram(cypyserialize.SerializableObject):
-            STX = cypyserialize.uchar(value=0x02)
-            timestamp = cypyserialize.uint()
-            body = cypyserialize.none()
-            ETX = cypyserialize.uchar(value=0x03)
-
-        class BoundingBoxDatagram(GenericDatagram):
-            body = BoundingBox()
-
         bbgram = BoundingBoxDatagram(timestamp=100)
         self.assertEqual(bbgram.timestamp, 100)
 
@@ -301,6 +301,20 @@ class SerializableObjectTests(unittest.TestCase):
 
         # we should have the same values as bb
         self.assertEqual(southeast.values() == bb.southeast.values())  # False
+
+    def testFieldWithStaticValueIssue2(self):
+        p = BoundingBoxDatagram()
+
+        self.assertIsNotNone(p.STX)
+        self.assertEqual(p.STX, 2)
+
+        p.timestamp = 100
+        p.body = BoundingBox(Point(0, 10), Point(10, 0))
+
+        # third party verification
+        bindata = struct.pack(b'<BIddddB', 2, 100, 0.0, 10.0, 10.0, 0.0, 3)
+        
+        self.assertEqual(p.pack(), bindata)
 
 if __name__ == '__main__':
     unittest.main()
