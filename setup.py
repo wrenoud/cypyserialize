@@ -17,38 +17,38 @@ SRC_DIR = NAME
 PACKAGES = [SRC_DIR]
 
 EXTENSIONS = [
-	Extension(
-		SRC_DIR + ".variant",
-		[SRC_DIR + '/variant.pyx'],
-		libraries=[]
-	),
-	Extension(
-		SRC_DIR + ".serializers",
-		[SRC_DIR + '/serializers.pyx'],
-		libraries=[]
-	),
-	Extension(
-		SRC_DIR + ".serializable",
-		[SRC_DIR + '/serializable.pyx'],
-		libraries=[]
-	)
+    Extension(
+        SRC_DIR + ".variant",
+        [SRC_DIR + '/variant.pyx'],
+        libraries=[]
+    ),
+    Extension(
+        SRC_DIR + ".serializers",
+        [SRC_DIR + '/serializers.pyx'],
+        libraries=[]
+    ),
+    Extension(
+        SRC_DIR + ".serializable",
+        [SRC_DIR + '/serializable.pyx'],
+        libraries=[]
+    )
 ]
 
 REQUIRES = []
 
 
 setup(
-	name = NAME,
-	packages = PACKAGES,
-	version = VERSION,
-	description=DESCR,
-	author=AUTHOR,
-	author_email=EMAIL,
-	url=URL,
-	download_url=
-	keywords = ['testing', 'logging', 'example'], # arbitrary keywords
-  	classifiers = [],
-	license=LICENSE,
-	ext_modules = cythonize(EXTENSIONS),
-    install_requires = REQUIRES,
+    name=NAME,
+    packages=PACKAGES,
+    version=VERSION,
+    description=DESCR,
+    author=AUTHOR,
+    author_email=EMAIL,
+    url=URL,
+    download_url=DOWNLOAD_URL,
+    keywords=['testing', 'logging', 'example'],  # arbitrary keywords
+    classifiers=[],
+    license=LICENSE,
+    ext_modules=cythonize(EXTENSIONS),
+    install_requires=REQUIRES,
 )
