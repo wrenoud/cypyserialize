@@ -44,7 +44,7 @@ cdef class Serializeable(object):
     cpdef SetIndex(self, index):
         self._index = index
 
-cdef class StructFieldBase(Serializeable):
+cdef class SerializableField(Serializeable):
     """
     Acts as a descriptor class for a class attribute in a BinaryObjectBase
     """
@@ -101,20 +101,26 @@ cdef class StructFieldBase(Serializeable):
     def __get__(self, parent, parent_type):
         if parent is None:
             return self
-        _tmp = parent.__values[self._index]
-        for getter in self._getters:
-            _tmp = getter(_tmp)
-        return _tmp
+        return self.get_by_index(parent, self._index)
 
     def __set__(self, parent, value):
         if value is None:
             parent.__values[self._index] = self._default
         else:
-            for setter in self._setters:
-                value = setter(value)
-            if self._validators is not None:
-                self.validate(value)
-            parent.__values[self._index] = value
+            self.set_by_index(parent, self._index, value)
+
+    cdef inline object get_by_index(self, Serializeable parent, uint64_t index):
+        cdef object _tmp = parent.__values[index]
+        for getter in self._getters:
+            _tmp = getter(_tmp)
+        return _tmp
+
+    cdef inline object set_by_index(self, Serializeable parent, uint64_t index, object value):
+        for setter in self._setters:
+            value = setter(value)
+        if self._validators is not None:
+            self.validate(value)
+        parent.__values[index] = value
 
     def validate(self, value):
         if self._validators is not None:
@@ -126,7 +132,7 @@ cdef class StructFieldBase(Serializeable):
         return make_object_from_variant(self._unpacker(buffer, offset))
 
 
-cdef class pad(StructFieldBase):
+cdef class pad(SerializableField):
     """padding byte"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'x'
@@ -136,7 +142,7 @@ cdef class pad(StructFieldBase):
         self.size = sizeof(uint8_t)
 
 
-cdef class char(StructFieldBase):
+cdef class char(SerializableField):
     """string of length 1"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'c'
@@ -146,7 +152,7 @@ cdef class char(StructFieldBase):
         self.size = sizeof(uint8_t)
 
 
-cdef class schar(StructFieldBase):
+cdef class schar(SerializableField):
     """signed char"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'b'
@@ -156,7 +162,7 @@ cdef class schar(StructFieldBase):
         self.size = sizeof(int8_t)
 
 
-cdef class uchar(StructFieldBase):
+cdef class uchar(SerializableField):
     """unsigned char"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'B'
@@ -166,7 +172,7 @@ cdef class uchar(StructFieldBase):
         self.size = sizeof(uint8_t)
 
 
-cdef class bool(StructFieldBase):
+cdef class bool(SerializableField):
     """boolean value"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'?'
@@ -176,7 +182,7 @@ cdef class bool(StructFieldBase):
         self.size = sizeof(uint8_t)
 
 
-cdef class short(StructFieldBase):
+cdef class short(SerializableField):
     """short"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'h'
@@ -186,7 +192,7 @@ cdef class short(StructFieldBase):
         self.size = sizeof(int16_t)
 
 
-cdef class ushort(StructFieldBase):
+cdef class ushort(SerializableField):
     """unsigned short"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'H'
@@ -196,7 +202,7 @@ cdef class ushort(StructFieldBase):
         self.size = sizeof(uint16_t)
 
 
-cdef class sint(StructFieldBase):
+cdef class sint(SerializableField):
     """signed integer"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'i'
@@ -206,7 +212,7 @@ cdef class sint(StructFieldBase):
         self.size = sizeof(int32_t)
 
 
-cdef class uint(StructFieldBase):
+cdef class uint(SerializableField):
     """unsigned integer"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'I'
@@ -220,7 +226,7 @@ cdef class long(sint): pass
 cdef class ulong(uint): pass
 
 
-cdef class longlong(StructFieldBase):
+cdef class longlong(SerializableField):
     """signed long"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'l'
@@ -230,7 +236,7 @@ cdef class longlong(StructFieldBase):
         self.size = sizeof(int64_t)
 
 
-cdef class ulonglong(StructFieldBase):
+cdef class ulonglong(SerializableField):
     """unsigned long"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'L'
@@ -240,7 +246,7 @@ cdef class ulonglong(StructFieldBase):
         self.size = sizeof(uint64_t)
 
 
-cdef class double(StructFieldBase):
+cdef class double(SerializableField):
     """double"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'd'
@@ -250,7 +256,7 @@ cdef class double(StructFieldBase):
         self.size = sizeof(double)
 
 
-cdef class float(StructFieldBase):
+cdef class float(SerializableField):
     """float"""
     def __cinit__(self, default=None, getter=None, setter=None, value=None):
         self.format = b'f'
@@ -260,7 +266,7 @@ cdef class float(StructFieldBase):
         self.size = sizeof(float)
 
 
-class none(StructFieldBase):
+class none(SerializableField):
     pass
 
 
@@ -269,12 +275,15 @@ little_endian = b'<'
 big_endian = b'>'
 network = b'!'
 
+cdef class SerializableBase(Serializeable):
+    cdef:
+        readonly bint _flat
+        public list __values
 
-cdef class StructObjectBase(Serializeable):
+cdef class SerializableObject(SerializableBase):
+    __slots__ = ()
     # _flat = True           # boolean flag indicating if size is reportable a-priori, assumed true until shown to be not
     # _partial_class = False # flag indicating child fields have been defined, but not as readable type
-
-    cdef public list __values
 
     def __cinit__(self, *args, **kargs):
         cdef long argc = len(args)
@@ -286,7 +295,7 @@ cdef class StructObjectBase(Serializeable):
             self.__class__._partial_class = False
             self.__class__._flat = True
 
-            is_subclass_of_base = StructObjectBase in self.__class__.__bases__
+            is_subclass_of_base = SerializableObject in self.__class__.__bases__
 
             # migrate any superclass fields into subclass
             if not is_subclass_of_base:
@@ -376,28 +385,36 @@ cdef class StructObjectBase(Serializeable):
         else:
             raise AttributeError("{} is not an attribute of {}".format(field_name, self.__class__.__name__))
 
-    cdef inline void check_container(self, StructObjectBase parent):
+    cdef inline void check_container(self, Serializeable parent, uint64_t index):
         """Checks that an appropriate empty value had been set for this field in it's parent"""
         cdef int i, n = self.__len__()
-        if parent.__values[self._index] is None:
+        if parent.__values[index] is None:
             # hasn't been initialized in parent, set all values to none
-            parent.__values[self._index] = []
+            parent.__values[index] = []
             for i in range(n):
-                parent.__values[self._index].append(None)
+                parent.__values[index].append(None)
 
     def __get__(self, parent, parent_type):
-        if parent is not None:
-            # kansas city shuffle
-            # retrieve values from parent, for now we'll masquerade as this parent's child
-            self.check_container(parent)
-            self.__values = parent.__values[self._index]
-        return self
+        if parent is None:
+            return self
+        else:
+            return self.get_by_index(parent, self._index)
 
     def __set__(self, parent, value):
-        self.check_container(parent)
+        self.set_by_index(parent, self._index, value)
+
+    cdef inline object get_by_index(self, Serializeable parent, uint64_t index):
+        # kansas city shuffle
+        # retrieve values from parent, for now we'll masquerade as this parent's child
+        self.check_container(parent, index)
+        self.__values = parent.__values[index]
+        return self
+
+    cdef inline int set_by_index(self, Serializeable parent, uint64_t index, object value) except 1:
+        self.check_container(parent, index)
         if issubclass(value.__class__, self.__class__):
             # copy pointer to outside values
-            parent.__values[self._index] = value.__values
+            parent.__values[index] = value.__values
         else:
             raise TypeError("'{}' must be of type '{}', given '{}'".format(self._name, self.__class__.__name__, value.__class__.__name__))
 
@@ -442,9 +459,9 @@ cdef class StructObjectBase(Serializeable):
             result = []
             for field_name in self.__class__._field_order[key]:
                 field = self.__class__.__dict__[field_name]
-                if issubclass(field.__class__, StructFieldBase):
+                if issubclass(field.__class__, SerializableField):
                     result.append(field.__get__(self, self.__class__))
-                elif issubclass(field.__class__, StructObjectBase):
+                elif issubclass(field.__class__, SerializableObject):
                     result.append(field)
             return result
         else:
@@ -481,7 +498,7 @@ cdef class StructObjectBase(Serializeable):
         self._unpack(bindata, &offset, self.__values)
         # self._size = offset
 
-    cdef _unpack(self, const unsigned char * bindata, long * offset, list container):
+    cdef int _unpack(self, const unsigned char * bindata, long * offset, list container) except -1:
         cdef str field_name
         cdef object field
         cdef list _field_list = self.__class__._field_order
@@ -489,11 +506,14 @@ cdef class StructObjectBase(Serializeable):
         for field_name in _field_list:
             field = self.__class__.__dict__[field_name]
 
-            if issubclass(field.__class__, StructFieldBase):
-                container.append(make_object_from_variant((<StructFieldBase>field)._unpacker(bindata, offset))) # StructFieldBase._unpack(field, bindata, offset)
-            elif issubclass(field.__class__, StructObjectBase):
+            if issubclass(field.__class__, SerializableField):
+                container.append(make_object_from_variant((<SerializableField>field)._unpacker(bindata, offset)))
+            elif issubclass(field.__class__, SerializableObject):
                 container.append([])
-                StructObjectBase._unpack(field, bindata, offset, container[-1])
+                SerializableObject._unpack(field, bindata, offset, container[-1])
+            elif issubclass(field.__class__, SerializableArray):
+                container.append([])
+                SerializableArray._unpack(field, bindata, offset, container[-1], self)
             else:
                 raise Exception("Attempted to use unknown Serializeable ({}) to unpack.".format(type(field)))
 
@@ -502,7 +522,7 @@ cdef class StructObjectBase(Serializeable):
         self._pack(buff, self.__values)
         return buff
 
-    cdef _pack(self, bytearray buff, list container):
+    cdef int _pack(self, bytearray buff, list container) except -1:
         cdef str field_name
         cdef object field
         cdef list _field_list = self.__class__._field_order
@@ -510,10 +530,15 @@ cdef class StructObjectBase(Serializeable):
         for field_name in _field_list:
             field = self.__class__.__dict__[field_name]
 
-            if issubclass(field.__class__, StructFieldBase):
-                (<StructFieldBase>field)._packer(buff, container[field._index]) # StructFieldBase._unpack(field, bindata, offset)
-            elif issubclass(field.__class__, StructObjectBase):
-                StructObjectBase._pack(field, buff, container[field._index])
+            if container[field._index] is None:
+                raise Exception("{} not set".format(field_name))
+
+            if issubclass(field.__class__, SerializableField):
+                (<SerializableField>field)._packer(buff, container[field._index])
+            elif issubclass(field.__class__, SerializableObject):
+                SerializableObject._pack(field, buff, container[field._index])
+            elif issubclass(field.__class__, SerializableArray):
+                SerializableArray._pack(field, buff, container[field._index])
             else:
                 raise Exception("Attempted to use unknown Serializeable ({}) to unpack.".format(type(field)))
 
@@ -540,53 +565,63 @@ cdef class StructObjectBase(Serializeable):
             self.__setattr__(key,value)
 
 
-class StructArrayBase(Serializeable):
-    _python_type = list
+cdef class SerializableArray(SerializableBase):
+    cdef:
+        readonly Serializeable object_type
+        object _length
 
-    def __init__(self, object_type=None, len=None, default=None, getter=None, setter=None, value=None):
-        self._length = len
+    def __cinit__(self, object_type, count=None):
+        #if "_flat" not in self.__class__.__dict__:
+        self._flat = False
+        if isinstance(count, int):
+            self._flat = True
+        
+        self._length = count
         self.object_type = object_type
 
         if not issubclass(object_type.__class__, Serializeable):
             raise Exception("Not an instance of a class that subclasses Serializeable")
 
-        self._flat = False
+        if self._length is None:
+            if not self.object_type._flat:
+                raise Exception("Unbounded size unsupported in SerializableArray for variable size type {}".format(object_type.__class__.__name__))
 
-    def __get__(self, parent, parent_type=None):
+        self.__values = []
+
+    def __get__(self, parent, parent_type):
         if parent is not None:
             # kansas city shuffle
             # retrieve values from parent, for now we'll masquerade as this parent's child
-            if self._name not in parent.__dict__:
+            if parent.__values[self._index] is None:
                 # hasn't been initialized in parent, set all values to none
                 # self.__set__(parent, None)
-                parent.__dict__[self._name] = []
-            self.__dict__ = parent.__dict__[self._name]
+                parent.__values[self._index] = []
+            self.__values = parent.__values[self._index]
         return self
 
     def __set__(self, parent, value):
         # create empty dict in parent
         if value is None:
-            self.__dict__ = parent.__dict__[self._name] = []
+            self.__values = parent.__values[self._index] = []
         elif issubclass(value.__class__, self.__class__):
             # copy pointer to outside values
-            parent.__dict__[self._name] = value.__dict__
+            parent.__values[self._index] = value.__values
         elif issubclass(value.__class__, list):
-            parent.__dict__[self._name] = value
+            parent.__values[self._index] = value
         elif issubclass(value.__class__, tuple):
-            parent.__dict__[self._name] = list(value)
+            parent.__values[self._index] = list(value)
         else:
             raise TypeError("'{}' must be of type '{}', given '{}'".format(self._name, self.__class__.__name__, value.__class__.__name__))
 
     def __len__(self):
-        return len(self.__dict__)
+        return len(self.__values)
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            obj = self.__dict__[key]
-            if issubclass(self.object_type.__class__, StructFieldBase):
-                return self.object_type.unprep(obj)
-            elif issubclass(self.object_type.__class__, StructObjectBase):
-                return obj
+            if issubclass(self.object_type.__class__, SerializableField):
+                return (<SerializableField>self.object_type).get_by_index(self, key)
+            elif issubclass(self.object_type.__class__, SerializableObject):
+                return (<SerializableObject>self.object_type).get_by_index(self, key)
         elif isinstance(key, slice):
             values = []
             for i in range(*key.indices(self.__len__())):
@@ -598,59 +633,79 @@ class StructArrayBase(Serializeable):
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
-            if key < len(self.__dict__):
-                self.__dict__[key] = self.object_type.prep(value)
+            if key < self.__len__():
+                if issubclass(self.object_type.__class__, SerializableField):
+                    (<SerializableField>self.object_type).set_by_index(self, key, value)
+                elif issubclass(self.object_type.__class__, SerializableObject):
+                    (<SerializableObject>self.object_type).set_by_index(self, key, value)
             else:
                 raise IndexError("Index: {} not in object".format(key))
         elif isinstance(key, slice):
-            for i, index in enumerate(key.indices(self.__len__())):
-                self.__dict__[index] = self.object_type.prep(value[i])
+            if issubclass(self.object_type.__class__, SerializableField):
+                for i, index in enumerate(key.indices(self.__len__())):
+                    (<SerializableField>self.object_type).set_by_index(self, index, value)
+            elif issubclass(self.object_type.__class__, SerializableObject):
+                for i, index in enumerate(key.indices(self.__len__())):
+                    (<SerializableObject>self.object_type).set_by_index(self, index, value)
         else:
             raise Exception("Unrecognized index: {}".format(key))
 
     def append(self, *args, **kargs):
-        if issubclass(self.object_type.__class__, StructFieldBase):
-            obj = self.object_type.prep(args[0])
-        elif issubclass(self.object_type.__class__, StructObjectBase):
+        if issubclass(self.object_type.__class__, SerializableField):
+            self.__values.append(None)
+            (<SerializableField>self.object_type).set_by_index(self, self.__len__() - 1, args[0])
+        elif issubclass(self.object_type.__class__, SerializableObject):
             # TODO: this is ineficient, it creates a new descriptor for each item
             obj = self.object_type.__class__(*args,**kargs)
-        self.__dict__.append(obj)
+            self.__values.append(obj.__values)
 
-    @property
-    def size(self):
-        if issubclass(self.object_type.__class__, StructFieldBase):
-            return self.object_type.size * self.__len__()
-        elif issubclass(self.object_type.__class__, StructObjectBase) and self.object_type._flat:
-            return self.object_type.size * self.__len__()
-        else:
-            size = 0
-            for obj in self.__dict__:
-                size += obj.size
-            return size
-
-    def _unpack_from(self, bindata, parent, offset=0):
-        if self._length != None:
-            if isinstance(self._length, int):
-                count = self._length
+    property size:
+        def __get__(self):
+            if issubclass(self.object_type.__class__, SerializableField):
+                return self.object_type.size * self.__len__()
+            elif issubclass(self.object_type.__class__, SerializableObject) and self.object_type._flat:
+                return self.object_type.size * self.__len__()
             else:
-                count = self._length(parent)
+                size = 0
+                for obj in self.__values:
+                    size += obj.size
+                return size
+
+    cdef int _unpack(self, const unsigned char * bindata, long * offset, list container, object parent) except -1:
+        cdef int i, count = 0
+
+        if self._length is None:
+            count = len(bindata) - offset[0] - len(bindata) % self.object_type.size
         else:
-            count = len(bindata) - len(bindata) % self.object_type.size
+            if isinstance(self._length, SerializableField):
+                count = make_object_from_variant((<SerializableField>self._length)._unpacker(bindata, offset))
+            elif isinstance(self._length, int):
+                count = self._length
+            else: # callable, i.e. lambda
+                count = self._length(parent)
 
-        if issubclass(self.object_type.__class__, StructFieldBase):
-            # lets just unpack these all at once
-            fmt = bytes(str(count), "ASCII") + self.object_type.format
-            self.__dict__ = parent.__dict__[self._name] = structure.unpack(fmt, bindata[0:count*self.object_type.size])
-        elif issubclass(self.object_type.__class__, StructObjectBase):
+        if issubclass(self.object_type.__class__, SerializableField):
             for i in range(count):
-                self.append(memoryview(bindata)[self.size:])
+                container.append(make_object_from_variant((<SerializableField>self.object_type)._unpacker(bindata, offset)))
+        elif issubclass(self.object_type.__class__, SerializableObject):
+            for i in range(count):
+                container.append([])
+                SerializableObject._unpack(self.object_type, bindata, offset, container[-1])
 
-    def _pack(self):
-        if issubclass(self.object_type.__class__, StructFieldBase):
-            return structure.pack(str(self.__len__())+self.object_type.fmt, *self.__dict__)
-        elif issubclass(self.object_type.__class__, StructObjectBase):
-            s = bytes("", "ASCII")
-            for val in self.__dict__:
-                s += val.pack()
-            return s
+    cdef int _pack(self, bytearray buff, list container) except -1:
+        cdef int i, count = len(container)
+
+        # if we're responsible for serializing the length we do it now
+        if isinstance(self._length, SerializableField):
+            (<SerializableField>self._length)._packer(buff, count)
+       
+        if issubclass(self.object_type.__class__, SerializableField):
+            for i in range(count):
+                (<SerializableField>self.object_type)._packer(buff, container[i])
+        elif issubclass(self.object_type.__class__, SerializableObject):
+            for i in range(count):
+                SerializableObject._pack(self.object_type, buff, container[i])
+        else:
+            raise Exception("Attempted to use unknown Serializeable ({}) to unpack.".format(type(self.object_type)))
+
 

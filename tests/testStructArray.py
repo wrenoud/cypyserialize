@@ -12,25 +12,23 @@ sys.path.append("..\\")
 import src as cypyserialize
 
 
-class Point(cypyserialize.StructObjectBase):
+class Point(cypyserialize.SerializableObject):
     "Basic point class"
     x = cypyserialize.double()
     y = cypyserialize.double()
 
 
-class Path(cypyserialize.StructObjectBase):
-    # the number of points in the path
-    point_count = cypyserialize.uint()
+class Path(cypyserialize.SerializableObject):
     # the points
-    points = cypyserialize.StructArrayBase(
+    points = cypyserialize.SerializableArray(
         object_type=Point(),
-        count=lambda self: self.point_count
+        count=cypyserialize.uint()
     )
 
 
-class DoubleList(cypyserialize.StructObjectBase):
+class DoubleList(cypyserialize.SerializableObject):
     count = cypyserialize.uint(default=6)
-    doubles = cypyserialize.StructArrayBase(cypyserialize.double(), 6)
+    doubles = cypyserialize.SerializableArray(cypyserialize.double(), 6)
 
 
 class structArrayTests(unittest.TestCase):
@@ -51,27 +49,42 @@ class structArrayTests(unittest.TestCase):
     def testPack(self):
         p = Path()
         p.points.append(0.0, 10.0)
-        self.assertEqual(p.pack(), struct.pack('Idd', 1, 0.0, 10.0))
+        self.assertEqual(p.pack(), struct.pack('<Idd', 1, 0.0, 10.0))
 
     def testUnpack(self):
-        p = Path(struct.pack('Idddd', 2, 0.0, 10.0, 10.0, 20.0))
+        s = struct.pack('<Idddd', 2, 0.0, 10.0, 10.0, 20.0)
+        p = Path(s)
         self.assertEqual(list(p.points[0].items()), [('x', 0.0), ('y', 10.0)])
         self.assertEqual(list(p.points[1].items()), [('x', 10.0), ('y', 20.0)])
-        self.assertEqual(p.point_count, 2)
 
     def testObjectTypeStructFieldWOLenIssue6(self):
-        class generic_string(cypyserialize.StructObjectBase):
-            text = cypyserialize.StructArrayBase(
+        class generic_string(cypyserialize.SerializableObject):
+            text = cypyserialize.SerializableArray(
                 object_type=cypyserialize.char()
             )
 
         s = bytes('Hello World', "ASCII")
         o = generic_string(bytes('Hello World', "ASCII"))
-        self.assertEqual(o.text[:], [bytes(chr(x), "ASCII") for x in s])
+        self.assertEqual(o.text[:], [x for x in s])
 
     def testBadObjectType(self):
         with self.assertRaises(Exception):
-            cypyserialize.StructArrayBase(object_type=Point)
+            cypyserialize.SerializableArray(object_type=Point)
+
+    def testAssignObjectByIndex(self):
+        p = Path()
+        for i in range(4):
+            p.points.append(i*10.0, i*10.0)
+        p.points[0].x = 3.14159
+        self.assertEqual(p.points[0].x, 3.14159)
+
+    def testAssignFieldByIndex(self):
+        d = DoubleList()
+
+        d.doubles.append(4)
+        d.doubles.append(4)
+        d.doubles[0] = 3.14
+        self.assertEqual(d.doubles[0], 3.14)
 
 if __name__ == '__main__':
     unittest.main()

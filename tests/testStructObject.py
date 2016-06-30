@@ -14,28 +14,28 @@ sys.path.append("..\\")
 import src as cypyserialize
 
 
-class Point(cypyserialize.StructObjectBase):
+class Point(cypyserialize.SerializableObject):
     "Basic po1 class"
     x = cypyserialize.double()
     y = cypyserialize.double()
 
 
-class Point3D(cypyserialize.StructObjectBase):
+class Point3D(cypyserialize.SerializableObject):
     "Basic point class"
     x = cypyserialize.double()
     y = cypyserialize.double()
     z = cypyserialize.double()
 
 
-class BoundingBox(cypyserialize.StructObjectBase):
+class BoundingBox(cypyserialize.SerializableObject):
     northwest = Point()
     southeast = Point()
 
 
-class StructObjectBaseTests(unittest.TestCase):
+class SerializableObjectTests(unittest.TestCase):
 
     def testByte(self):
-        class GenericContainer(cypyserialize.StructObjectBase):
+        class GenericContainer(cypyserialize.SerializableObject):
             a = cypyserialize.schar()
             b = cypyserialize.uchar()
         s = struct.pack("bB", -2**6, 2**7)
@@ -44,7 +44,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(obj.b, 2**7)
 
     def testShort(self):
-        class GenericContainer(cypyserialize.StructObjectBase):
+        class GenericContainer(cypyserialize.SerializableObject):
             a = cypyserialize.short()
             b = cypyserialize.ushort()
         s = struct.pack("hH", -2**14, 2**15)
@@ -53,7 +53,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(obj.b, 2**15)
 
     def testInt(self):
-        class GenericContainer(cypyserialize.StructObjectBase):
+        class GenericContainer(cypyserialize.SerializableObject):
             a = cypyserialize.sint()
             b = cypyserialize.uint()
         s = struct.pack("iI", -2**30, 2**31)
@@ -62,7 +62,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(obj.b, 2**31)
 
     def testLongLong(self):
-        class GenericContainer(cypyserialize.StructObjectBase):
+        class GenericContainer(cypyserialize.SerializableObject):
             a = cypyserialize.longlong()
             b = cypyserialize.ulonglong()
         s = struct.pack("qQ", -2**62, 2**63)
@@ -106,7 +106,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(bb.pack(), struct.pack(b'dddd', 0.0, 10.0, 15.0, 0.0))
 
     def testPackWithSetter(self):
-        class Generic(cypyserialize.StructObjectBase):
+        class Generic(cypyserialize.SerializableObject):
             timestamp = cypyserialize.uint(
                 setter=calendar.timegm,
                 getter=time.gmtime
@@ -116,7 +116,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(t.pack(), struct.pack('I', 100))
 
     def testUnpackWithGetter(self):
-        class Generic(cypyserialize.StructObjectBase):
+        class Generic(cypyserialize.SerializableObject):
             timestamp = cypyserialize.uint(
                 setter=calendar.timegm,
                 getter=time.gmtime
@@ -172,7 +172,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertRaises(Exception, p.__setitem__, int)
 
     def testOverloading(self):
-        class GenericBoundingBox(cypyserialize.StructObjectBase):
+        class GenericBoundingBox(cypyserialize.SerializableObject):
             northwest = cypyserialize.none()
             southeast = cypyserialize.none()
 
@@ -184,7 +184,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(bb.northwest.z, 30.0)
 
     def testOverloadingNotImplemented(self):
-        class GenericBoundingBox(cypyserialize.StructObjectBase):
+        class GenericBoundingBox(cypyserialize.SerializableObject):
             northwest = cypyserialize.none()
             southeast = cypyserialize.none()
         GenericBoundingBox() # has to be instanciated once
@@ -251,7 +251,7 @@ class StructObjectBaseTests(unittest.TestCase):
 
     def testOverloadingFixesIssue1(self):
         # covers fix #1
-        class GenericDatagram(cypyserialize.StructObjectBase):
+        class GenericDatagram(cypyserialize.SerializableObject):
             STX = cypyserialize.uchar(value=0x02)
             timestamp = cypyserialize.uint()
             body = cypyserialize.none()
@@ -264,7 +264,7 @@ class StructObjectBaseTests(unittest.TestCase):
         self.assertEqual(bbgram.timestamp, 100)
 
     def testOverloadingWithNewFieldRaisesException(self):
-        class Generic(cypyserialize.StructObjectBase):
+        class Generic(cypyserialize.SerializableObject):
             myfield = cypyserialize.none()
         with self.assertRaises(Exception):
             class Overload(Generic):
