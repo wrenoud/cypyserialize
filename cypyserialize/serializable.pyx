@@ -12,13 +12,6 @@ cimport cython
 
 from .serializers cimport *
 
-########## DEBUGGING ##########
-import sys
-sys.path.append("..")
-from Logger import Logger
-log = Logger()
-########## DEBUGGING ##########
-
 string_types = None
 try:
     unicode

@@ -4,8 +4,9 @@ from distutils.extension import Extension
 
 NAME = "cypyserialize"
 VERSION = "0.1"
-DESCR = ""
-URL = "http://www.google.com"
+DESCR = "Really easy, really quick, binary parser framework for Python"
+URL = "https://github.com/wrenoud/cypyserialize"
+DOWNLOAD_URL = "https://github.com/wrenoud/cypyserialize/tarball/" + VERSION
 
 AUTHOR = "Weston Renoud"
 EMAIL = "wrenoud@gmail.com"
@@ -34,18 +35,20 @@ EXTENSIONS = [
 ]
 
 REQUIRES = []
-PACKAGES = ["src"]
+
 
 setup(
-    install_requires = REQUIRES,
-	packages = PACKAGES,
-	zip_safe = False,
 	name = NAME,
+	packages = PACKAGES,
 	version = VERSION,
 	description=DESCR,
 	author=AUTHOR,
 	author_email=EMAIL,
 	url=URL,
+	download_url=
+	keywords = ['testing', 'logging', 'example'], # arbitrary keywords
+  	classifiers = [],
 	license=LICENSE,
-	ext_modules = cythonize(EXTENSIONS)
+	ext_modules = cythonize(EXTENSIONS),
+    install_requires = REQUIRES,
 )
