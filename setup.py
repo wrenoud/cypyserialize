@@ -1,6 +1,11 @@
 from distutils.core import setup
-from Cython.Build import cythonize
 from distutils.extension import Extension
+
+try:
+    from Cython.Build import cythonize
+    EXT = ".pyx"
+except:
+    EXT = ".c"
 
 NAME = "cypyserialize"
 VERSION = "1.0"
@@ -25,17 +30,17 @@ PACKAGES = [SRC_DIR]
 EXTENSIONS = [
     Extension(
         SRC_DIR + ".variant",
-        [SRC_DIR + '/variant.pyx'],
+        [SRC_DIR + '/variant' + EXT],
         libraries=[]
     ),
     Extension(
         SRC_DIR + ".serializers",
-        [SRC_DIR + '/serializers.pyx'],
+        [SRC_DIR + '/serializers' + EXT],
         libraries=[]
     ),
     Extension(
         SRC_DIR + ".serializable",
-        [SRC_DIR + '/serializable.pyx'],
+        [SRC_DIR + '/serializable' + EXT],
         libraries=[]
     )
 ]
