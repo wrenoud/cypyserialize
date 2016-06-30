@@ -4,6 +4,7 @@
 *.c
 *.pyd
 
+dist/
 build/
 htmlcov/
 .coverage
