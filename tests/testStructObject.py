@@ -281,6 +281,25 @@ class SerializableObjectTests(unittest.TestCase):
         bb = BetterBoundingBox(Point(0,10),Point(10,0))
         self.assertEqual(bb.area, 100)
 
+    @unittest.expectedFailure
+    def testRemappingOnChildAttributesIssue1(self):
+        # child attributes are descriptors that change their interal reference
+        # to point to a values list in the root object on access. This is
+        # problemetic if people want a reference to the child attribute, as
+        # currently the values it points to can change if they interact with
+        # another instance of the root parent.
+
+        bb = BoundingBox()  # should be all 'None'
+        southeast = bb.southeast  # grabbing the child object
+        bb2 = BoundingBox(Point(5, 5), Point(10, 10))
+
+        self.assertNotEqual(southeast.values(), bb2.southeast.values())
+        # we should not have remapped, so they should still not be equal
+        self.assertNotEqual(southeast.values(), bb2.southeast.values())
+
+        # we should have the same values as bb
+        self.assertEqual(southeast.values() == bb.southeast.values())  # False
+
         
 if __name__ == '__main__':
     unittest.main()
