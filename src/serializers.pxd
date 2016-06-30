@@ -13,15 +13,15 @@ cdef variant_container get_uint64(const unsigned char * binbuffer, long *offset)
 cdef variant_container get_double(const unsigned char * binbuffer, long *offset)
 cdef variant_container get_float(const unsigned char * binbuffer, long *offset)
 
-ctypedef void (*deserializer_t)(bytearray, object)
+ctypedef int (*deserializer_t)(bytearray, object) except -1
 
-cdef void set_int8(bytearray binbuffer, object var)
-cdef void set_uint8(bytearray binbuffer, object var)
-cdef void set_int16(bytearray binbuffer, object var)
-cdef void set_uint16(bytearray binbuffer, object var)
-cdef void set_int32(bytearray binbuffer, object var)
-cdef void set_uint32(bytearray binbuffer, object var)
-cdef void set_int64(bytearray binbuffer, object var)
-cdef void set_uint64(bytearray binbuffer, object var)
-cdef void set_double(bytearray binbuffer, object var)
-cdef void set_float(bytearray binbuffer, object var)
+cdef int set_int8(bytearray binbuffer, object var) except -1
+cdef int set_uint8(bytearray binbuffer, object var) except -1
+cdef int set_int16(bytearray binbuffer, object var) except -1
+cdef int set_uint16(bytearray binbuffer, object var) except -1
+cdef int set_int32(bytearray binbuffer, object var) except -1
+cdef int set_uint32(bytearray binbuffer, object var) except -1
+cdef int set_int64(bytearray binbuffer, object var) except -1
+cdef int set_uint64(bytearray binbuffer, object var) except -1
+cdef int set_double(bytearray binbuffer, object var) except -1
+cdef int set_float(bytearray binbuffer, object var) except -1
