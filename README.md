@@ -3,6 +3,14 @@ SerializableObject
 
 A pythonic semantic for describing binary data structures and associated python objects.
 
+Installation
+------------
+
+```
+pip install cypyserialize
+```
+
+
 Basic Usage
 -----------
 
@@ -19,51 +27,51 @@ Object instances of the `Point` class, which extends the `SerializableObject`, c
 
 ```Python
 >>> p = Point() # create default instance
->>> print p.items()
-[('x',0.0), ('y', 0.0)]
+>>> list(p.items())
+[('x', None), ('y', None)]
 >>> p.x = 5000.0 # set x
 >>> p.y = 300.5 # set y
->>> print p.items()
-[('x',5000.0), ('y', 300.5)]
+>>> list(p.items())
+[('x', 5000.0), ('y', 300.5)]
 ```
 
 Alternately, the object can be initialized with our values. The parameter order should match the order specified in the class attribute `_field_order`.
 
 ```Python
 >>> p = Point(5000.0, 300.5)
->>> print p.items()
-[('x',5000.0), ('y', 300.5)]
+>>> list(p.items())
+[('x', 5000.0), ('y', 300.5)]
 ```
 
 Or we can use the attribute names if we forgot the order.
 
 ```Python
 >>> p = Point(y=300.5, x=5000.0)
->>> print p.items()
-[('x',5000.0), ('y', 300.5)]
+>>> list(p.items())
+[('x', 5000.0), ('y', 300.5)]
 ```
 
 Or mix the two (just remeber that after the first named parameter subsequent parameters will have to be named as well).
 
 ```Python
 >>> p = Point(5000.0, y=300.5)
->>> print p.items()
-[('x',5000.0), ('y', 300.5)]
+>>> list(p.items())
+[('x', 5000.0), ('y', 300.5)]
 ```
 
 To get the binary representation just call the class method `pack`
 
 ```Python
 >>> p.pack()
-'\x00\x00\x00\x00\x00\x88\xb3@\x00\x00\x00\x00\x00\xc8r@'
+bytearray(b'\x00\x00\x00\x00\x00\x88\xb3@\x00\x00\x00\x00\x00\xc8r@')
 ```
 
 Lastly, we can initialize with a binary string.
 
 ```Python
->>> p = Point(binary_data)
->>> print p.items()
-[('x',5000.0), ('y', 300.5)]
+>>> p = Point(b'\x00\x00\x00\x00\x00\x88\xb3@\x00\x00\x00\x00\x00\xc8r@')
+>>> list(p.items())
+[('x', 5000.0), ('y', 300.5)]
 ```
 
 Using Substructures
@@ -81,7 +89,7 @@ Seriously, it's that easy. Let's initialize one of these.
 
 ```Python
 >>> bb = BoundingBox()
->>> print bb.items()
+>>> list(bb.items())
 [('northwest', <Point object>), ('southeast',  <Point object>)]
 ```
 
@@ -89,9 +97,9 @@ Let's try that again but with some points
 
 ```Python
 >>> bb = BoundingBox(Point(0.0, 10.0), Point(15.0, 0.0))
->>> print bb.northwest.y
+>>> bb.northwest.y
 10.0
->>> print bb.southeast.x
+>>> bb.southeast.x
 15.0
 ```
 
@@ -122,72 +130,47 @@ That's it. Lets create one of this. We'll set the timestamp and get the binary.
 ```Python
 >>> p = BoundingBoxDatagram()
 >>> p.timestamp = time.time()
+>>> p.body = BoundingBox(Point(0, 10), Point(10, 0))
 >>> p.items()
 [('STX', 2), ('timestamp', 1398373100.412985), ('body', <__main__.BoundingBox object at 0xb713f3c4>), ('ETX', 3)]
 >>> p.pack()
-'\x02\xeczYS\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x03'
+'\x02...'
 ```
 
 Arrays of Substructures
 -----------------------
+
 Now we're going to reuse the point structure to describe a path as a series of points with a description.
 
 ```Python
 class Path(cypyserialize.SerializableObject):
-    # the number of points in the path
-    point_count = cypyserialize.uint(
-        generator = lambda self: len(self.points)
-    )
     # the points
     points = cypyserialize.SerializableArray(
         Point(),
-        count = lambda self: self.point_count
+        count=cypyserialize.uint()
     )
 ```
 
-The inline function for length (`len`) is called before a binary read (unpack) and is used for determining the read length.
+`count` with be the field type that is used to read and write the number of `Point()` objects in the structure.
 
-The generator on `point_count` is only called after the full structure is read.
+Byte Order
+----------
 
-But an even simpler approach is to let the array manage it's size, just tell in the type to store as 
+_**Currently Unsupported**_
 
-```Python
-class Path(cypyserialize.SerializableObject):
-    # the points
-    points = cypyserialize.SerializableArray(
-        Point(),
-        count = cypyserialize.uint()
-    )
-```
-
-Explicit Byte Order
--------------------
-
-Up to now we've omitted specifying the byte order. As with python's builtin module `struct`, the systems native byte order will be assumed unless otherwise specified. Lets take the `Point` class and add in the byte order explicitely.
-
-```Python
-class Point(cypyserialize.SerializableObject):
-    "Basic point class"
-    _byte_order = little_endian
-    x = cypyserialize.double()
-    y = cypyserialize.double()
-```
+Byte order is always little endian at present.
 
 Custom Computed Attributes
-------
+--------------------------
 
 ```Python
 class BetterBoundingBox(BoundingBox):
-    __slots__ = ('area',)
-    def __init__(self, *args, **kargs):
-        super(BetterBoundingBox,self).__init__(*args, **kargs)
-        
+    def __init__(self):
         self.area = (self.southeast.x - self.northwest.x) * \
                     (self.northwest.y - self.southeast.y)
 ```
 
-Note that we need to pass through the `args` and `kargs` to the superclass initializing function.
-Additionally any custom attributes need to listed in `__slots__`.
+Note that we need to accept `args` and `kargs`, we don't need to call the superclass __init__ though as it wasn't defined on BoundingBox.
 
 Lets try it out.
 
