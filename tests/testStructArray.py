@@ -21,7 +21,7 @@ class Point(cypyserialize.SerializableObject):
 class Path(cypyserialize.SerializableObject):
     # the points
     points = cypyserialize.SerializableArray(
-        object_type=Point(),
+        Point(),
         count=cypyserialize.uint()
     )
 
@@ -60,7 +60,7 @@ class structArrayTests(unittest.TestCase):
     def testObjectTypeStructFieldWOLenIssue6(self):
         class generic_string(cypyserialize.SerializableObject):
             text = cypyserialize.SerializableArray(
-                object_type=cypyserialize.char()
+                cypyserialize.char()
             )
 
         s = bytes('Hello World', "ASCII")
@@ -69,7 +69,7 @@ class structArrayTests(unittest.TestCase):
 
     def testBadObjectType(self):
         with self.assertRaises(Exception):
-            cypyserialize.SerializableArray(object_type=Point)
+            cypyserialize.SerializableArray(Point)
 
     def testAssignObjectByIndex(self):
         p = Path()

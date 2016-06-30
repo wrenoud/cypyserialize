@@ -1,6 +1,6 @@
 
 # int8_t
-cdef variant_container get_int8(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_int8(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_int8_variant((<int8_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(int8_t)
@@ -13,7 +13,7 @@ cdef int set_int8(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # uint8_t
-cdef variant_container get_uint8(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_uint8(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_uint8_variant((<uint8_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(uint8_t)
@@ -26,7 +26,7 @@ cdef int set_uint8(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # int16_t
-cdef variant_container get_int16(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_int16(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_int16_variant((<int16_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(int16_t)
@@ -39,7 +39,7 @@ cdef int set_int16(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # uint16_t
-cdef variant_container get_uint16(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_uint16(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_uint16_variant((<uint16_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(uint16_t)
@@ -52,7 +52,7 @@ cdef int set_uint16(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # int32_t
-cdef variant_container get_int32(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_int32(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_int32_variant((<int32_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(int32_t)
@@ -65,7 +65,7 @@ cdef int set_int32(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # uint32_t
-cdef variant_container get_uint32(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_uint32(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_uint32_variant((<uint32_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(uint32_t)
@@ -78,7 +78,7 @@ cdef int set_uint32(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # int64_t
-cdef variant_container get_int64(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_int64(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_int64_variant((<int64_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(int64_t)
@@ -91,7 +91,7 @@ cdef int set_int64(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # uint64_t
-cdef variant_container get_uint64(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_uint64(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_uint64_variant((<uint64_t*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(uint64_t)
@@ -104,7 +104,7 @@ cdef int set_uint64(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # double
-cdef variant_container get_double(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_double(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_double_variant((<double*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(double)
@@ -117,7 +117,7 @@ cdef int set_double(bytearray buff, object obj) except -1:
         buff.append((<uint8_t *>&value)[i])
 
 # float
-cdef variant_container get_float(const unsigned char * binbuffer, long *offset):
+cdef variant_container get_float(const unsigned char * binbuffer, uint32_t *offset):
     cdef variant_container var
     var = make_float_variant((<float*>&binbuffer[offset[0]])[0])
     offset[0] += sizeof(float)
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     for p,s in types:
             print("""
     # {0}{1}
-    cdef variant_container get_{0}(const unsigned char * binbuffer, long *offset):
+    cdef variant_container get_{0}(const unsigned char * binbuffer, uint32_t *offset):
         cdef variant_container var
         var = make_{0}_variant((<{0}{1}*>&binbuffer[offset[0]])[0])
         offset[0] += sizeof({0}{1})
