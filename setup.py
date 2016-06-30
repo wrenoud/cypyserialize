@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 from distutils.extension import Extension
 
 NAME = "cypyserialize"
-VERSION = "0.1"
+VERSION = "0.3"
 DESCR = "Really easy, really quick, binary parser framework for Python"
 URL = "https://github.com/wrenoud/cypyserialize"
 DOWNLOAD_URL = "https://github.com/wrenoud/cypyserialize/tarball/" + VERSION
