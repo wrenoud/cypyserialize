@@ -11,7 +11,7 @@ except:
     EXT = ".c"
 
 NAME = "cypyserialize"
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 DESCR = "Really easy, really quick, binary parser framework for Python"
 try:
    import pypandoc
