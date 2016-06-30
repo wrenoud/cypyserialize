@@ -12,7 +12,7 @@ EMAIL = "wrenoud@gmail.com"
 
 LICENSE = "Apache 2.0"
 
-SRC_DIR = "src"
+SRC_DIR = NAME
 PACKAGES = [SRC_DIR]
 
 EXTENSIONS = [

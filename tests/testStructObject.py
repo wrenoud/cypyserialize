@@ -11,7 +11,7 @@ import time
 
 sys.path.append("..\\")
 
-import src as cypyserialize
+import cypyserialize
 
 
 class Point(cypyserialize.SerializableObject):

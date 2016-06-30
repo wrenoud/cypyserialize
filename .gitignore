@@ -1,8 +1,8 @@
 # bytecode files
 *.pyc
 
-src/*.c
-src/*.pyd
+*.c
+*.pyd
 
 build/
 htmlcov/

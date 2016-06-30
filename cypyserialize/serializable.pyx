@@ -1,5 +1,6 @@
 # cython: profile=True
-# 
+# cython: linetrace=True
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
 import inspect
 import types
@@ -10,6 +11,13 @@ from libc.stdint cimport int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, 
 cimport cython
 
 from .serializers cimport *
+
+########## DEBUGGING ##########
+import sys
+sys.path.append("..")
+from Logger import Logger
+log = Logger()
+########## DEBUGGING ##########
 
 string_types = None
 try:
