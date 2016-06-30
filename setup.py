@@ -1,8 +1,11 @@
 from distutils.core import setup
 from distutils.extension import Extension
 
+cmdclass = { }
+
 try:
-    from Cython.Build import cythonize
+    from Cython.Distutils import build_ext
+    cmdclass.update({ 'build_ext': build_ext })
     EXT = ".pyx"
 except:
     EXT = ".c"
@@ -61,6 +64,7 @@ setup(
     keywords=['testing', 'logging', 'example'],  # arbitrary keywords
     classifiers=[],
     license=LICENSE,
-    ext_modules=cythonize(EXTENSIONS),
+    cmdclass=cmdclass,
+    ext_modules=EXTENSIONS,
     install_requires=REQUIRES,
 )
