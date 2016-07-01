@@ -3,7 +3,7 @@ import struct
 import pyximport
 
 pyximport.install()
-import src as cypyserialize
+import cypyserialize
 
 sys.path.append("..\\qpstools\\libs\\")
 import structObject as structobject
