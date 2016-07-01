@@ -11,8 +11,9 @@ except:
     EXT = ".c"
 
 NAME = "cypyserialize"
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 DESCR = "Really easy, really quick, binary parser framework for Python"
+
 try:
    import pypandoc
    LONG_DESC = pypandoc.convert('README.md', 'rst')
@@ -27,26 +28,23 @@ EMAIL = "wrenoud@gmail.com"
 
 LICENSE = "Apache 2.0"
 
-SRC_DIR = NAME
-PACKAGES = [SRC_DIR]
+SRC_DIR = ".\\" + NAME
+PACKAGES = [NAME]
 
 EXTENSIONS = [
     Extension(
-        SRC_DIR + ".variant",
+        "variant",
         [SRC_DIR + '/variant' + EXT],
-        include_dirs=['.']
         libraries=[]
     ),
     Extension(
-        SRC_DIR + ".serializers",
+        "serializers",
         [SRC_DIR + '/serializers' + EXT],
-        include_dirs=['.']
         libraries=[]
     ),
     Extension(
-        SRC_DIR + ".serializable",
+        "serializable",
         [SRC_DIR + '/serializable' + EXT],
-        include_dirs=['.']
         libraries=[]
     )
 ]
@@ -68,6 +66,7 @@ setup(
     classifiers=[],
     license=LICENSE,
     cmdclass=cmdclass,
+    ext_package=NAME,
     ext_modules=EXTENSIONS,
     install_requires=REQUIRES,
 )

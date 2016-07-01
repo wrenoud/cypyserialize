@@ -3,3 +3,8 @@ include LICENSE
 
 # Include the readme file
 include README.md
+
+recursive-include cypyserialize *.c
+recursive-include cypyserialize *.pyx
+recursive-include cypyserialize *.pxd
+recursive-include cypyserialize *.py
